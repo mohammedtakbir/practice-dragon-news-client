@@ -1,5 +1,5 @@
 import React, { createContext } from 'react';
-import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, sendEmailVerification, signInWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
 import { useState } from 'react';
 import app from '../firebase/firebase.config';
 import { useEffect } from 'react';
@@ -10,6 +10,7 @@ export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     //* create an user
     const userSignUp = (email, password) => {
@@ -18,6 +19,7 @@ const AuthProvider = ({ children }) => {
 
     //* logIn an user
     const userLogIn = (email, password) => {
+        setLoading(true);
         return signInWithEmailAndPassword(auth, email, password);
     }
 
@@ -27,32 +29,31 @@ const AuthProvider = ({ children }) => {
     }
     //* logout
     const logout = () => {
-        return signOut(auth)
+        return signOut(auth);
     };
 
     //* update user profile
-    const updateUserProfile = (name, photoURL) => {
-        return updateProfile(auth.currentUser, {
-            displayName: name,
-            photoURL: photoURL
-        })
+    const updateUserProfile = (profile) => {
+        return updateProfile(auth.currentUser, profile)
     };
-
-
-
-
-
-
 
     //* get currently sign-in user
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser)
+            if (currentUser === null || currentUser.emailVerified) {
+                setUser(currentUser);
+            }
+            setLoading(false);
         })
         return () => unsubscribe()
-    }, [])
+    }, []);
 
-    const authInfo = { user, userSignUp, userLogIn, googleSignIn, logout, updateUserProfile };
+    //* email verification
+    const verifyEmail = () => {
+        return sendEmailVerification(auth.currentUser)
+    }
+
+    const authInfo = { user, userSignUp, userLogIn, googleSignIn, logout, updateUserProfile, loading, verifyEmail, setLoading };
     return (
         <AuthContext.Provider value={authInfo}>
             {children}
